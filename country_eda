@@ -1,0 +1,66 @@
+import pandas as pd
+import json
+import requests
+from bs4 import BeautifulSoup
+
+## SCRAPE DATA LINKS, DOWNLOAD DATA INTO DATAFRAMES JOIN INTO FINAL DATASET
+# Make a GET request to the website
+url = "http://country.io/data/"
+response = requests.get(url)
+
+# Parse the HTML content
+soup = BeautifulSoup(response.text, 'html.parser')
+
+# Find all links
+links = soup.find_all('a')
+
+# Define list for frames
+frames = []
+
+# Extract the data URLs from each links
+for link in links:
+    if link.text.endswith('.json'):
+        #print(link.text)
+        
+        response = requests.get(link.text)
+        
+        # Convert the JSON string to a Python dictionary
+        data = json.loads(response.text)
+        
+        # Define column name from json link
+        col_name = link.text.split("/")[-1].replace('.json','')
+        
+        # Create a pandas DataFrame from the dictionary
+        df = pd.DataFrame.from_dict(data, orient='index', columns=[col_name])   
+       
+        # Organize dataframes in a dictionary
+        frames.append(df)
+
+#Join all frame into a final dataset
+data = pd.concat([df for df in frames],axis=1,join='inner')
+
+## PERFORM EDA
+# Get basic information about the data
+print(data.info())
+
+# Get the first 5 rows of the data
+print(data.head())
+
+# Get summary statistics
+print(data.describe())
+
+# Check for missing values
+print(data.isnull().sum())
+
+# Plot histograms 
+import matplotlib.pyplot as plt
+
+# Plot bar plots for continent
+top10_currencies = data.groupby('currency').size().sort_values(ascending=False).head(10)
+top10_currencies.plot(kind='bar')
+plt.show()
+
+data.groupby('continent').size().plot(kind='bar')
+plt.show()
+
+
