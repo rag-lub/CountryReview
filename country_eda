@@ -2,18 +2,16 @@ import pandas as pd
 import json
 import requests
 from bs4 import BeautifulSoup
+import csv
 
 ## SCRAPE DATA LINKS, DOWNLOAD DATA INTO DATAFRAMES JOIN INTO FINAL DATASET
 # Make a GET request to the website
 url = "http://country.io/data/"
 response = requests.get(url)
-
 # Parse the HTML content
 soup = BeautifulSoup(response.text, 'html.parser')
-
 # Find all links
 links = soup.find_all('a')
-
 # Define list for frames
 frames = []
 
@@ -21,46 +19,58 @@ frames = []
 for link in links:
     if link.text.endswith('.json'):
         #print(link.text)
-        
-        response = requests.get(link.text)
-        
+        response = requests.get(link.text)     
         # Convert the JSON string to a Python dictionary
         data = json.loads(response.text)
-        
         # Define column name from json link
         col_name = link.text.split("/")[-1].replace('.json','')
-        
-        # Create a pandas DataFrame from the dictionary
+         # Create a pandas DataFrame from the dictionary
         df = pd.DataFrame.from_dict(data, orient='index', columns=[col_name])   
-       
         # Organize dataframes in a dictionary
         frames.append(df)
 
-#Join all frame into a final dataset
+#Join all frame into a country dataset
 data = pd.concat([df for df in frames],axis=1,join='inner')
+
+#scrape demographics data by country
+url = "https://www.worldometers.info/world-population/population-by-country/"
+response = requests.get(url)
+soup = BeautifulSoup(response.text, 'html.parser')
+countries = soup.find_all ("table")[0]
+df_cnt_detail = pd.read_html(str(countries))[0]
+
+# Join country data with demographics data
+data = data.merge(df_cnt_detail, how='inner',left_on='names',right_on='Country (or dependency)')
 
 ## PERFORM EDA
 # Get basic information about the data
 print(data.info())
-
 # Get the first 5 rows of the data
 print(data.head())
-
 # Get summary statistics
 print(data.describe())
-
 # Check for missing values
 print(data.isnull().sum())
 
-# Plot histograms 
+## PLOT HISTOGRAMS
 import matplotlib.pyplot as plt
 
-# Plot bar plots for continent
-top10_currencies = data.groupby('currency').size().sort_values(ascending=False).head(10)
-top10_currencies.plot(kind='bar')
+# Plot bar chart for population change
+data['Population Percent Change'] = data['Net Change']/data['Population (2020)']
+top10 = data.sort_values('Population Percent Change',ascending=False).head(10)
+bottom10 = data.sort_values('Population Percent Change',ascending=False).tail(10)
+pop_change = pd.concat([top10,bottom10])
+pop_change.plot(x='names',y='Population Percent Change',kind='bar')
 plt.show()
 
-data.groupby('continent').size().plot(kind='bar')
+# Plot bar chart for fert rate
+data['Fert. Rate'] = pd.to_numeric(data['Fert. Rate'], errors='coerce')
+top10 = data.sort_values('Fert. Rate',ascending=False).head(10)
+bottom10 = data[data['Fert. Rate'].notna()].sort_values('Fert. Rate',ascending=False).tail(10)
+fert_change = pd.concat([top10,bottom10])
+fert_change.plot(x='names',y='Fert. Rate',kind='bar')
 plt.show()
+
+
 
 
