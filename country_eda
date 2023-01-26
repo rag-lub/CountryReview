@@ -71,6 +71,32 @@ fert_change = pd.concat([top10,bottom10])
 fert_change.plot(x='names',y='Fert. Rate',kind='bar')
 plt.show()
 
+# Plot bar chart for continent population change
+data['Population Percent Change'] = data['Net Change']/data['Population (2020)']
+pop_change = data.groupby('continent', as_index=False).mean().sort_values('Population Percent Change',ascending=False).head(10)
+pop_change.plot(x='continent',y='Population Percent Change',kind='bar')
+plt.show()
 
+# Plot scatterplot for Fert Rate and Medium Age
+data['Fert. Rate'] = pd.to_numeric(data['Fert. Rate'], errors='coerce')
+data['Med. Age'] = pd.to_numeric(data['Med. Age'], errors='coerce')
+plt.scatter(data['Fert. Rate'],data['Med. Age'])
+plt.xlabel('Fert Rate')
+plt.ylabel('Medium Age')
+plt.title('Med Age vs Fertility Rate')
+plt.show()
 
+# Plot scatterplot for Fert Rate and Density
+data['Density (P/Km²)'] = pd.to_numeric(data['Density (P/Km²)'], errors='coerce')
+plt.scatter(data['Fert. Rate'],data['Density (P/Km²)'])
+plt.xlabel('Fert Rate')
+plt.ylabel('Density')
+plt.title('Density vs Fertility Rate')
+plt.show()
+
+#Plot correlation heatmap
+import seaborn as sns
+corr = data.corr()
+sns.heatmap(corr,annot=True,cmap='coolwarm')
+plt.show()
 
